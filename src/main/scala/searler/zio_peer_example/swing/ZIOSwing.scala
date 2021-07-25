@@ -1,7 +1,7 @@
 package searler.zio_peer_example.swing
 
-import zio.stream.ZStream
-import zio.{Hub, Promise, Ref, RefM, Runtime, ZIO}
+import zio.stream.{UStream, ZStream}
+import zio.{Enqueue, Hub, Promise, Ref, RefM, Runtime, ZIO}
 
 import javax.swing.SwingUtilities
 
@@ -10,7 +10,7 @@ object ZIOSwing {
 
   def triggerShutdown(shutdown: Promise[Nothing, Unit]): Unit = runtime.unsafeRun(shutdown.succeed(()))
 
-  def createOutgoing[S](upstream: Hub[S]): S => Unit = cmd => runtime.unsafeRun(upstream.publish(cmd))
+  def createOutgoing[S](outgoing: Enqueue[S]): S => Unit = cmd => runtime.unsafeRun(outgoing.offer(cmd))
 
   def get[T](ref: Ref[T]): T = runtime.unsafeRun(ref.get)
 
@@ -18,8 +18,8 @@ object ZIOSwing {
 
   def getM[T](ref: RefM[T]): T = runtime.unsafeRun(ref.get)
 
-  def createIncoming[S](downStream: Hub[S], target: S => Unit, f: S => Boolean = (_: S) => true) =
-    runtime.unsafeRun(ZStream.fromHub(downStream).filter(f).
+  def createIncoming[S](incoming: UStream[S], target: S => Unit, f: S => Boolean = (_: S) => true) =
+    runtime.unsafeRun(incoming.filter(f).
       foreach(data => ZIO.effectTotal(SwingUtilities.invokeLater(() => target(data)))).forkDaemon)
 
 

@@ -38,7 +38,7 @@ object UIMain extends App {
         Json.encode[Initial](Seq(CONNECTED))(DeriveJsonEncoder.gen[Initial])
       ).forkDaemon
 
-      _ <- ZIO(UserInterface.create(toController.toQueue, fromController, shutdown))
+      _ <- ZIO(UserInterface.create(toController.toQueue, ZStream.fromHub(fromController), shutdown))
       _ <- shutdown.await
 
     } yield ()

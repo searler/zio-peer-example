@@ -1,12 +1,13 @@
 package searler.zio_peer_example.ui
 
 import searler.zio_peer_example.dto.{PRESSED, UIData, UIDataFromController, UIDataToController}
-import zio.stream.ZStream
+import zio.stream.{UStream, ZStream}
 import zio.{Enqueue, Hub, Promise, Runtime, ZHub, ZIO}
 
 import java.awt.BorderLayout
 import java.awt.event.{WindowAdapter, WindowEvent}
 import javax.swing._
+
 
 
 class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit) {
@@ -49,7 +50,7 @@ class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit)
 object UserInterface {
  val runtime = Runtime.default
 
-  def create(toController: Enqueue[ UIDataToController], fromController: ZHub[Any, Any, Nothing, Nothing,  String,UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
+  def create(toController: Enqueue[ UIDataToController], fromController: UStream[UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
 
     val pusher: UIDataToController => Unit = cmd => runtime.unsafeRun(toController.offer(cmd))
 
@@ -57,7 +58,7 @@ object UserInterface {
 
     SwingUtilities.invokeLater(() => {
       val ui = new UserInterface(pusher, triggerShutdown)
-      runtime.unsafeRun(ZStream.fromHub(fromController).foreach(data => ZIO.effectTotal(SwingUtilities.invokeLater(() => ui.acceptor(data)))).forkDaemon)
+      runtime.unsafeRun(fromController.foreach(data => ZIO.effectTotal(SwingUtilities.invokeLater(() => ui.acceptor(data)))).forkDaemon)
     })
 
   }
