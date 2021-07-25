@@ -2,7 +2,7 @@ package searler.zio_peer_example.ui
 
 import searler.zio_peer_example.dto.{PRESSED, UIData, UIDataFromController, UIDataToController}
 import zio.stream.ZStream
-import zio.{Hub, Promise, Runtime, ZHub, ZIO}
+import zio.{Enqueue, Hub, Promise, Runtime, ZHub, ZIO}
 
 import java.awt.BorderLayout
 import java.awt.event.{WindowAdapter, WindowEvent}
@@ -49,9 +49,9 @@ class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit)
 object UserInterface {
  val runtime = Runtime.default
 
-  def create(toController: ZHub[Any, Any, Nothing, Nothing, UIDataToController, String], fromController: ZHub[Any, Any, Nothing, Nothing,  String,UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
+  def create(toController: Enqueue[ UIDataToController], fromController: ZHub[Any, Any, Nothing, Nothing,  String,UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
 
-    val pusher: UIDataToController => Unit = cmd => runtime.unsafeRun(toController.publish(cmd))
+    val pusher: UIDataToController => Unit = cmd => runtime.unsafeRun(toController.offer(cmd))
 
     def triggerShutdown: Unit = runtime.unsafeRun(shutdown.succeed(()))
 
