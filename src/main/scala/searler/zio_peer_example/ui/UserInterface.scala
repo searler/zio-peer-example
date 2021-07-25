@@ -1,14 +1,15 @@
 package searler.zio_peer_example.ui
 
+import searler.zio_peer_example.dto.{PRESSED, UIData, UIDataFromController, UIDataToController}
 import zio.stream.ZStream
-import zio.{Hub, Promise, Runtime, ZIO}
+import zio.{Hub, Promise, Runtime, ZHub, ZIO}
 
 import java.awt.BorderLayout
 import java.awt.event.{WindowAdapter, WindowEvent}
 import javax.swing._
 
 
-class UserInterface(val outgoing: String => Unit, shutdown: => Unit) {
+class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit) {
 
 
   private val frame = new JFrame
@@ -30,7 +31,7 @@ class UserInterface(val outgoing: String => Unit, shutdown: => Unit) {
   })
 
 
-  button.addActionListener(_ => outgoing("pressed"))
+  button.addActionListener(_ => outgoing(PRESSED))
 
 
   frame.setTitle("UI")
@@ -41,22 +42,22 @@ class UserInterface(val outgoing: String => Unit, shutdown: => Unit) {
 
   frame.setVisible(true)
 
-  def acceptor(incoming: String) = text.setText(incoming.toString)
+  def acceptor(incoming: UIDataFromController) = text.setText(incoming.toString)
 
 }
 
 object UserInterface {
  val runtime = Runtime.default
 
-  def create(upstream: Hub[String], downStream: Hub[String], shutdown: Promise[Nothing, Unit]): Unit = {
+  def create(toController: ZHub[Any, Any, Nothing, Nothing, UIDataToController, String], fromController: ZHub[Any, Any, Nothing, Nothing,  String,UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
 
-    val pusher: String => Unit = cmd => runtime.unsafeRun(upstream.publish(cmd))
+    val pusher: UIDataToController => Unit = cmd => runtime.unsafeRun(toController.publish(cmd))
 
     def triggerShutdown: Unit = runtime.unsafeRun(shutdown.succeed(()))
 
     SwingUtilities.invokeLater(() => {
       val ui = new UserInterface(pusher, triggerShutdown)
-      runtime.unsafeRun(ZStream.fromHub(downStream).foreach(data => ZIO.effectTotal(SwingUtilities.invokeLater(() => ui.acceptor(data)))).forkDaemon)
+      runtime.unsafeRun(ZStream.fromHub(fromController).foreach(data => ZIO.effectTotal(SwingUtilities.invokeLater(() => ui.acceptor(data)))).forkDaemon)
     })
 
   }
