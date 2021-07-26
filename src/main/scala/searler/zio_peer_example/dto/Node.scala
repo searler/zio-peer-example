@@ -6,13 +6,20 @@ import zio.blocking.Blocking
 
 import java.net.{InetAddress, InetSocketAddress, SocketAddress}
 
-case class Node(number: Int)
+
+sealed trait Component
+case object UI extends Component
+case class Node(number: Int) extends Component
 
 object Node {
+  val LOOPBACK = InetAddress.getLoopbackAddress
   def apply(map: Map[String, Int]): ZIO[Blocking, Nothing, Map[InetAddress, Node]] =
     Address.byName(map.keySet).map(_.map(p => p._2 -> Node(map(p._1))).toMap)
 
-  def mapped(mapping: Map[InetAddress, Node])(sa: SocketAddress): Option[Node] =
-    mapping.get(sa.asInstanceOf[InetSocketAddress].getAddress)
+  def mapped(mapping: Map[InetAddress, Component])(sa: SocketAddress): Option[Component] =
+     sa.asInstanceOf[InetSocketAddress].getAddress match {
+       case LOOPBACK => Option(UI)
+       case addr => mapping.get(addr)
+  }
 
 }

@@ -1,17 +1,15 @@
 package searler.zio_peer_example.ui
 
-import searler.zio_peer_example.dto.{PRESSED, UIData, UIDataFromController, UIDataToController}
-import zio.stream.{UStream, ZStream}
-import zio.{Enqueue, Hub, Promise, Runtime, ZHub, ZIO}
+import searler.zio_peer_example.dto.{PRESSED, UIDataFromController, UIDataToController}
+import zio.stream.UStream
+import zio.{Enqueue, Promise}
 
 import java.awt.BorderLayout
 import java.awt.event.{WindowAdapter, WindowEvent}
 import javax.swing._
 
 
-
 class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit) {
-
 
   private val frame = new JFrame
 
@@ -27,7 +25,8 @@ class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit)
 
   frame.addWindowListener(new WindowAdapter {
     override def windowClosing(e: WindowEvent) = {
-      shutdown; frame.dispose()
+      shutdown;
+      frame.dispose()
     }
   })
 
@@ -48,17 +47,16 @@ class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit)
 }
 
 object UserInterface {
- val runtime = Runtime.default
 
-  def create(toController: Enqueue[ UIDataToController], fromController: UStream[UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
+  import searler.zio_peer_example.swing.ZIOSwing._
 
-    val pusher: UIDataToController => Unit = cmd => runtime.unsafeRun(toController.offer(cmd))
-
-    def triggerShutdown: Unit = runtime.unsafeRun(shutdown.succeed(()))
+  def create(toController: Enqueue[UIDataToController], fromController: UStream[UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
 
     SwingUtilities.invokeLater(() => {
-      val ui = new UserInterface(pusher, triggerShutdown)
-      runtime.unsafeRun(fromController.foreach(data => ZIO.effectTotal(SwingUtilities.invokeLater(() => ui.acceptor(data)))).forkDaemon)
+      val ui = new UserInterface(createOutgoing[UIDataToController](toController),
+        triggerShutdown(shutdown))
+
+      createIncoming(fromController, ui.acceptor)
     })
 
   }
