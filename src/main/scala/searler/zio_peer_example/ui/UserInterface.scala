@@ -9,7 +9,8 @@ import java.awt.event.{WindowAdapter, WindowEvent}
 import javax.swing._
 
 
-class UserInterface(val outgoing: UIDataToController => Unit, shutdown: => Unit) {
+private class UserInterface(val outgoing: UIDataToController => Unit,
+                            shutdown: => Unit) {
 
   private val frame = new JFrame
 
@@ -50,7 +51,9 @@ object UserInterface {
 
   import searler.zio_peer_example.swing.ZIOSwing._
 
-  def create(toController: Enqueue[UIDataToController], fromController: UStream[UIDataFromController], shutdown: Promise[Nothing, Unit]): Unit = {
+  def create(toController: Enqueue[UIDataToController],
+             fromController: UStream[UIDataFromController],
+             shutdown: Promise[Nothing, Unit]): Unit = {
 
     SwingUtilities.invokeLater(() => {
       val ui = new UserInterface(createOutgoing[UIDataToController](toController),
