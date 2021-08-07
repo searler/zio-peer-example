@@ -11,7 +11,7 @@ class PeerTracker(selfNode: Node, tracker: AcceptorTracker[Component]) {
 
   def get: UIO[Peers] = tracker.get.map(create)
 
-  def changes: UStream[Peers] = tracker.changes.changes.map(create)
+  def changes: UStream[Peers] = tracker.changes.map(create).changes
 }
 
 object PeerTracker {
