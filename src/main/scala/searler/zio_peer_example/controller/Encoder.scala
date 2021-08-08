@@ -1,15 +1,12 @@
-package searler.zio_peer_example.dto
+package searler.zio_peer_example.controller
 
+import searler.zio_peer_example.dto.{Component, UIDataFromController}
 import zio.json.{DeriveJsonEncoder, EncoderOps}
 
 object Encoder {
 
   implicit val encoderComponent = DeriveJsonEncoder.gen[Component]
   implicit val encoderFrom = DeriveJsonEncoder.gen[UIDataFromController]
-  implicit val encoderTo = DeriveJsonEncoder.gen[UIDataToController]
 
   def from(value: UIDataFromController) = value.toJson
-
-  def to(value: UIDataToController) = value.toJson
-
 }

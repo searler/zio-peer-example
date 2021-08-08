@@ -9,7 +9,7 @@ import java.awt.event.{WindowAdapter, WindowEvent}
 import javax.swing._
 
 
-private class UserInterface(val outgoing: UIDataToController => Unit,
+class UserInterface(val outgoing: UIDataToController => Unit,
                             shutdown: => Unit) {
 
   private val frame = new JFrame

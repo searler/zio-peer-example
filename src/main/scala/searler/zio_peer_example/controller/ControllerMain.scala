@@ -1,8 +1,8 @@
 package searler.zio_peer_example.controller
 
-import searler.zio_peer.{ALL, Acceptor, AcceptorTracker, Routing, Single}
+import searler.zio_peer.{ALL, Acceptor, AcceptorTracker, AllBut, IGNORE, Routing, Single}
 import searler.zio_peer_example.Driver.{Request, Response}
-import searler.zio_peer_example.dto.{CONNECTED, Component, Decoder, Encoder, Node, Peers, REQUEST_INIT, UI, UIDataFromController, UIDataToController}
+import searler.zio_peer_example.dto.{CONNECTED, Component, Node, PERFORM, PRESSED, Peers, REQUEST_INIT, UI, UIDataFromController, UIDataToController}
 import searler.zio_peer_example.json.Json
 import searler.zio_tcp.TCP
 import zio._
@@ -10,6 +10,9 @@ import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder}
 import zio.stream.{Transducer, ZSink, ZStream, ZTransducer}
 
 object ControllerMain extends App{
+
+  val NOT_UI: AllBut[Component] = AllBut(UI)
+
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] = {
 
    val  NODES = Map("localhost" -> 0, "golem" -> 1)
@@ -28,9 +31,15 @@ object ControllerMain extends App{
 
       _ <- peerTracker.changes.map(p => ALL -> p).run(ZSink.fromHub(outgoingHub)).forkDaemon
 
-      _ <- ZStream.fromHub(incomingHub).collectM{case (src,REQUEST_INIT)   => peerTracker.get.map(p => Single(src) -> p) }.run(ZSink.fromHub(outgoingHub)).forkDaemon
+      handlers:Function[(Component,UIDataToController), ZIO[Any, Nothing, (Routing[Component],UIDataFromController)]] =
+         {
+           case (src,REQUEST_INIT)   => peerTracker.get.map(p => Single(src) -> p)
+           case (UI, PRESSED) => ZIO.succeed(NOT_UI -> PERFORM)
+           case (Node(_), PRESSED) => ZIO.succeed(IGNORE-> PERFORM)
+         }
 
-
+      _ <- ZStream.fromHub(incomingHub).mapMParUnordered(8)(handlers).run(ZSink.fromHub(outgoingHub)).forkDaemon
+      
       _ <- ZStream.fromHub(outgoingHub).run(ZSink.foreach(s => console.putStrLn(s"outgoingHub $s"))).forkDaemon
       _ <- ZStream.fromHub(incomingHub).run(ZSink.foreach(s => console.putStrLn(s"incomingHub $s"))).forkDaemon
 
