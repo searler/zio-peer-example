@@ -1,7 +1,7 @@
 package searler.zio_peer_example.ui
 
 import searler.zio_peer.SingleConnector
-import searler.zio_peer_example.dto.{CONNECTED, Initial, REQUEST_INIT, UIDataFromController, UIDataToController}
+import searler.zio_peer_example.dto.{CONNECTED, Initial,  REQUEST_INIT, UIDataFromController, UIDataToController}
 import searler.zio_peer_example.json.Json
 import searler.zio_tcp.TCP
 import zio.duration._
