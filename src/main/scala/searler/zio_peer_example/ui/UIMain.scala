@@ -1,7 +1,7 @@
 package searler.zio_peer_example.ui
 
 import searler.zio_peer.SingleConnector
-import searler.zio_peer_example.dto.{CONNECTED, Initial,  REQUEST_INIT, UIDataFromController, UIDataToController}
+import searler.zio_peer_example.dto._
 import searler.zio_peer_example.json.Json
 import searler.zio_tcp.TCP
 import zio.duration._
@@ -21,13 +21,11 @@ object UIMain extends App {
       _ <- ZStream.fromHub(fromController).filter(_ == CONNECTED).as(REQUEST_INIT).run(ZSink.fromHub(toController)).forkDaemon
 
       tracker <- Queue.bounded[Boolean](10)
-      // _ <- (tracker.filterOutput(_ == false).take *> shutdown.succeed(())).forkDaemon
 
       _ <- ZStream.fromHub(toController).run(ZSink.foreach(s => console.putStrLn(s"toController $s"))).forkDaemon
       _ <- ZStream.fromHub(fromController).run(ZSink.foreach(s => console.putStrLn(s"fromController $s"))).forkDaemon
 
-
-      connector <- SingleConnector.strings[UIDataToController, Long](
+      _ <- SingleConnector.strings[UIDataToController, Long](
         TCP.fromSocketClient(8886, "localhost", noDelay = true),
         tracker,
         toController,

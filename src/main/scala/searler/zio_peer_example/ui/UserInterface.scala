@@ -1,6 +1,6 @@
 package searler.zio_peer_example.ui
 
-import searler.zio_peer_example.dto.{PRESSED, UIDataFromController, UIDataToController}
+import searler.zio_peer_example.dto._
 import zio.stream.UStream
 import zio.{Enqueue, Promise}
 
@@ -10,16 +10,16 @@ import javax.swing._
 
 
 class UserInterface(val outgoing: UIDataToController => Unit,
-                            shutdown: => Unit) {
+                    shutdown: => Unit) {
 
   private val frame = new JFrame
 
   private val button = new JButton("Press")
-  private val text = new JLabel("LABEL")
+  private val text = new JLabel("                                     ")
 
 
   frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE)
-  frame.setBounds(100, 100, 200, 200)
+  frame.setBounds(200, 200, 300, 300)
 
   frame.add(button, BorderLayout.SOUTH)
   frame.add(text)
@@ -41,9 +41,12 @@ class UserInterface(val outgoing: UIDataToController => Unit,
 
   frame.validate()
 
-  frame.setVisible(true)
 
-  def acceptor(incoming: UIDataFromController) = text.setText(incoming.toString)
+  def acceptor(incoming: UIDataFromController) = incoming match {
+    case CONNECTED => frame.setVisible(true)
+    case Peers(peers) => text.setText(peers.map(_.toString).toList.sorted.mkString(", "))
+    case PERFORM => //not actually TODO
+  }
 
 }
 

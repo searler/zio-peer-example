@@ -9,7 +9,9 @@ import java.net.{ InetSocketAddress, SocketAddress,InetAddress}
 
 sealed trait Component
 case object UI extends Component
-case class Node(number: Int) extends Component
+case class Node(number: Int) extends Component{
+  override def toString: String = s"Node$number"
+}
 
 object Node {
   val LOOPBACK = InetAddress.getLoopbackAddress
