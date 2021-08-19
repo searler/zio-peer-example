@@ -9,7 +9,9 @@ sealed trait Initial
 
 case object CONNECTED extends UIDataFromController with Initial
 
-case object PERFORM extends UIDataFromController
+sealed trait FromController
+
+case object PERFORM extends FromController
 
 
 

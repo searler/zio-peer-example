@@ -6,8 +6,11 @@ import zio.json.{DecoderOps, DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, J
 
 object Json {
 
-  def encoding[A,T](encoder:T=>String)(hub:UIO[Hub[(A,String)]]) = hub.map(_
+  def encodingWrap[A,T](encoder:T=>String)(hub:UIO[Hub[(A,String)]]) = hub.map(_
     .contramap((resp: (A, T)) => (resp._1, encoder(resp._2))))
+
+  def encoding[A,T](encoder:T=>String)(hub:Hub[(A,String)]) = hub.contramap((resp: (A, T)) => (resp._1, encoder(resp._2)))
+
 
   def decoding[A,T ](decoder:String =>Either[String,T])(hub:UIO[Hub[(A,String)]]): ZIO[Any, Nothing, ZHub[Any, Any, Nothing, Nothing, (A, String), (A, T)]] = hub.map(_
     .map{case(host,json) => (host, decoder(json))}

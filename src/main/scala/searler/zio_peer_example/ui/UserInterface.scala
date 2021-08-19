@@ -45,7 +45,6 @@ class UserInterface(val outgoing: UIDataToController => Unit,
   def acceptor(incoming: UIDataFromController) = incoming match {
     case CONNECTED => frame.setVisible(true)
     case Peers(peers) => text.setText(peers.map(_.toString).toList.sorted.mkString(", "))
-    case PERFORM => //not actually TODO
   }
 
 }

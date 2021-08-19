@@ -23,28 +23,40 @@ object ControllerMain extends App {
 
       peerTracker <- PeerTracker(NODES, tracker)
 
-      outgoingHub: PHub[ (Routing[Component], UIDataFromController), (Routing[Component], String)] <-
-        Json.encoding(Encoder.from)(ZHub.sliding[(Routing[Component], String)](8))
+      outgoingHub  <- ZHub.sliding[(Routing[Component], String)](8)
+
+      toUIHub: PHub[ (Routing[Component], UIDataFromController), (Routing[Component], String)] =
+        Json.encoding(Encoder.toUI)(outgoingHub)
+
+      toOtherHub: PHub[ (Routing[Component], FromController), (Routing[Component], String)] =
+        Json.encoding(Encoder.toOther)(outgoingHub)
 
       incomingHub: PHub[ (Component, String), (Component, UIDataToController)] <- Json.decoding(Decoder.to)(ZHub.sliding[(Component, String)](20))
 
-      _ <- peerTracker.changes.map(p => ALL -> p).run(ZSink.fromHub(outgoingHub)).forkDaemon
+      _ <- peerTracker.changes.map(p => ALL -> p).run(ZSink.fromHub(toUIHub)).forkDaemon
 
-
-      handlers: Function[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], UIDataFromController)]] = {
+      uihandlers: Function[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], UIDataFromController)]] = {
         case (src, REQUEST_INIT) => peerTracker.get.map(p => Single(src) -> p)
-        case (UI, PRESSED) => ZIO.succeed(NOT_UI -> PERFORM)
-        case (Node(_), PRESSED) => ZIO.succeed(IGNORE -> PERFORM)
+        case (_, PRESSED) => ZIO.succeed(IGNORE -> null)
       }
 
-      _ <- ZStream.fromHub(incomingHub).mapMParUnordered(2)(handlers).run(ZSink.fromHub(outgoingHub)).forkDaemon
 
-      _ <- ZStream.fromHub(outgoingHub).run(ZSink.foreach(s => console.putStrLn(s"outgoingHub $s"))).forkDaemon
+      handlers: Function[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], FromController)]] = {
+        case (UI, PRESSED) => ZIO.succeed(NOT_UI -> PERFORM)
+        case (Node(_), PRESSED) => ZIO.succeed(IGNORE -> _)
+        case (_, REQUEST_INIT) => ZIO.succeed(IGNORE -> _)
+      }
+
+      _ <- ZStream.fromHub(incomingHub).mapMParUnordered(2)(uihandlers).run(ZSink.fromHub(toUIHub)).forkDaemon
+      _ <- ZStream.fromHub(incomingHub).mapMParUnordered(2)(handlers).run(ZSink.fromHub(toOtherHub)).forkDaemon
+
+      _ <- ZStream.fromHub(toUIHub).run(ZSink.foreach(s => console.putStrLn(s"toUIHub $s"))).forkDaemon
+      _ <- ZStream.fromHub(toOtherHub).run(ZSink.foreach(s => console.putStrLn(s"toOtherHub $s"))).forkDaemon
       _ <- ZStream.fromHub(incomingHub).run(ZSink.foreach(s => console.putStrLn(s"incomingHub $s"))).forkDaemon
 
       nodeMap <- Node(NODES)
 
-      _ <- Acceptor.strings[Component, UIDataFromController](TCP.fromSocketServer(8886, noDelay = true),
+      _ <- Acceptor.strings[Component](TCP.fromSocketServer(8886, noDelay = true),
         20,
         Node.mapped(nodeMap),
         tracker,
