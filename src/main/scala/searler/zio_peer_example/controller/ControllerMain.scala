@@ -9,6 +9,13 @@ import zio.stream.{ZSink, ZStream}
 
 object ControllerMain extends App {
 
+    def collectMPar[R, E, O, O2](stream: ZStream[R, E, O] )(n: Int)(pf: PartialFunction[O, ZIO[R, E, O2]]) =
+      stream.flatMapPar[R, E, O2](n)(a =>
+        if(pf.isDefinedAt(a))
+          ZStream.fromEffect(pf(a))
+        else ZStream.empty
+      )
+
   type  PHub[A,B] = ZHub[Any, Any, Nothing, Nothing, A, B]
 
   val NOT_UI: AllBut[Component] = AllBut(UI)
@@ -35,20 +42,17 @@ object ControllerMain extends App {
 
       _ <- peerTracker.changes.map(p => ALL -> p).run(ZSink.fromHub(toUIHub)).forkDaemon
 
-      uihandlers: Function[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], UIDataFromController)]] = {
+      uihandlers: PartialFunction[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], UIDataFromController)]] = {
         case (src, REQUEST_INIT) => peerTracker.get.map(p => Single(src) -> p)
-        case (_, PRESSED) => ZIO.succeed(IGNORE -> null)
       }
 
-
-      handlers: Function[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], FromController)]] = {
+      handlers: PartialFunction[(Component, UIDataToController), ZIO[Any, Nothing, (Routing[Component], FromController)]] = {
         case (UI, PRESSED) => ZIO.succeed(NOT_UI -> PERFORM)
-        case (Node(_), PRESSED) => ZIO.succeed(IGNORE -> _)
-        case (_, REQUEST_INIT) => ZIO.succeed(IGNORE -> _)
       }
 
-      _ <- ZStream.fromHub(incomingHub).mapMParUnordered(2)(uihandlers).run(ZSink.fromHub(toUIHub)).forkDaemon
-      _ <- ZStream.fromHub(incomingHub).mapMParUnordered(2)(handlers).run(ZSink.fromHub(toOtherHub)).forkDaemon
+      _ <- collectMPar(ZStream.fromHub(incomingHub))(2)(uihandlers).run(ZSink.fromHub(toUIHub)).forkDaemon
+
+      _ <- collectMPar(ZStream.fromHub(incomingHub))(2)(handlers).run(ZSink.fromHub(toOtherHub)).forkDaemon
 
       _ <- ZStream.fromHub(toUIHub).run(ZSink.foreach(s => console.putStrLn(s"toUIHub $s"))).forkDaemon
       _ <- ZStream.fromHub(toOtherHub).run(ZSink.foreach(s => console.putStrLn(s"toOtherHub $s"))).forkDaemon
