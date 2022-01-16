@@ -1,6 +1,6 @@
 package searler.zio_peer_example.controller
 
-import searler.zio_peer.AcceptorTracker
+import io.github.searler.zio_peer.AcceptorTracker
 import searler.zio_peer_example.dto.{Component, Node, Peers, UI}
 import zio.UIO
 import zio.stream.UStream

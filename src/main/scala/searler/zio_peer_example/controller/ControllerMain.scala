@@ -1,9 +1,9 @@
 package searler.zio_peer_example.controller
 
-import searler.zio_peer._
+import io.github.searler.zio_peer._
 import searler.zio_peer_example.dto._
 import searler.zio_peer_example.json.Json
-import searler.zio_tcp.TCP
+import io.github.searler.zio_tcp.TCP
 import zio._
 import zio.stream.{ZSink, ZStream}
 

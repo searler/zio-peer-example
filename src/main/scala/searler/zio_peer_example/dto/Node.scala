@@ -1,6 +1,6 @@
 package searler.zio_peer_example.dto
 
-import searler.zio_tcp.Address
+import io.github.searler.zio_tcp.Address
 import zio.ZIO
 import zio.blocking.Blocking
 

@@ -34,12 +34,13 @@ class UserInterface(val outgoing: UIDataToController => Unit,
 
   button.addActionListener(_ => outgoing(PRESSED))
 
-
   frame.setTitle("UI")
 
   frame.pack()
 
   frame.validate()
+
+  frame.setVisible(true)
 
 
   def acceptor(incoming: UIDataFromController) = incoming match {
